@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .form-container form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .form-container input[type="text"],
+        .form-container input[type="date"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            flex: 1;
+        }
+        .form-container button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .form-container button:hover {
+            background-color: #45a049;
+        }
+        .task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .task-item {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .task-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .task-details {
+            flex: 1;
+            margin-left: 10px;
+        }
+        .task-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .task-description {
+            font-style: italic; 
+            color: #666;
+        }
+        .task-deadline {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .btn-container {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-container button {
+            padding: 8px 15px;
+            font-size: 14px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn-update {
+            background-color: rgb(24, 190, 190);
+            color: black;
+        }
+        .btn-clear {
+            background-color: blue;
+            color: white;
+        }
+        .btn-delete {
+            background-color: red;
+            color: black;
+        }
+        .btn-container button:hover {
+            opacity: 0.8;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+        }
+        .update-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .update-form label {
+            font-weight: bold;
+        }
+        .update-form input[type="text"],
+        .update-form input[type="date"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .update-form button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .update-form button:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Task Manager</h1>
+        <div class="form-container">
+            <form action="/add" method="post">
+                <input type="text" name="item" placeholder="Task title" required>
+                <input type="text" name="description" placeholder="Description" required>
+                <input type="date" name="deadline" required>
+                <button type="submit">Add</button>
+            </form>
+            <form action="/clear" method="post">
+                <button type="submit" class="btn-clear">Clear All</button>
+            </form>
+        </div>
+        
+        <ul class="task-list">
+            {{range $index, $task := .Tasks}}
+            <li class="task-item">
+                <input type="checkbox" name="delete" value="{{$index}}">
+                <div class="task-details">
+                    <span class="task-title">{{$task.Title}}</span><br>
+                    <span class="task-description">{{$task.Description}}</span><br>
+                    <span class="task-deadline">{{$task.Deadline}}</span>
+                </div>
+                <div class="btn-container">
+                    <button type="button" class="btn-update" onclick="showUpdateModal({{$index}}, '{{$task.Title}}', '{{$task.Description}}', '{{$task.Deadline}}')">Update</button>
+                    <button type="button" class="btn-delete" onclick="deleteTask({{$index}})">Delete</button>
+                </div>
+            </li>
+            {{end}}
+        </ul>
+    </div>
+
+    <div id="updateModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <form id="updateForm" class="update-form" action="/update" method="post">
+                <input type="hidden" id="updateIndex" name="index">
+                <label for="updateItem">Task Title:</label>
+                <input type="text" id="updateItem" name="item" required>
+                <label for="updateDescription">Description:</label>
+                <input type="text" id="updateDescription" name="description" required>
+                <label for="updateDeadline">Deadline:</label>
+                <input type="date" id="updateDeadline" name="deadline" required>
+                <div class="btn-container">
+                    <button type="button" class="btn-update" onclick="updateTask()">Save</button>
+                    <button type="button" class="close" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showUpdateModal(index, title, description, deadline) {
+            document.getElementById('updateIndex').value = index;
+            document.getElementById('updateItem').value = title;
+            document.getElementById('updateDescription').value = description;
+            document.getElementById('updateDeadline').value = deadline;
+            document.getElementById('updateModal').style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById('updateModal').style.display = "none";
+        }
+
+        function updateTask() {
+            document.getElementById('updateForm').submit();
+            closeModal();
+        }
+
+        function deleteTask(index) {
+            var confirmation = confirm("Are you sure you want to delete this task?");
+            if (confirmation) {
+                var deleteForm = document.createElement("form");
+                deleteForm.method = "POST";
+                deleteForm.action = "/delete";
+                var deleteInput = document.createElement("input");
+                deleteInput.type = "hidden";
+                deleteInput.name = "delete";
+                deleteInput.value = index.toString();
+                deleteForm.appendChild(deleteInput);
+                document.body.appendChild(deleteForm);
+                deleteForm.submit();
+            }
+        }
+    </script>
+</body>
+</html>
